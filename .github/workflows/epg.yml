@@ -1,11 +1,11 @@
 name: EPG
-# 每天00:40 10:15 15:00 18:30更新
+# 每天00:40 10:15 15:00 18:30更新 (UTC+8)
 on:
   schedule:
-    - cron: 40 16 * * *
-    - cron: 15 02 * * *
-    - cron: 00 07 * * *
-    - cron: 30 10 * * *
+    - cron: '40 16 * * *'  # 00:40 UTC+8 (16:40 UTC)
+    - cron: '15 02 * * *'  # 10:15 UTC+8 (02:15 UTC)
+    - cron: '00 07 * * *'  # 15:00 UTC+8 (07:00 UTC)
+    - cron: '30 10 * * *'  # 18:30 UTC+8 (10:30 UTC)
   workflow_dispatch:
 
 jobs:
@@ -17,29 +17,29 @@ jobs:
         include:
           - url: https://raw.githubusercontent.com/sparkssssssssss/epg/main/pp.xml.gz
             branch: 112114
-            sleep: 0秒
-          #- url: https://e.erw.cc/e.xml.gz
-          #  分支: erw
-          # sleep: 30秒
-          #- url: http://epg.51zmt.top:8000/e.xml
-          #  branch: 51zmt
-          #  sleep: 60s
+            sleep: 0
+          # - url: https://e.erw.cc/e.xml.gz
+          #   branch: erw
+          #   sleep: 30
+          # - url: http://epg.51zmt.top:8000/e.xml
+          #   branch: 51zmt
+          #   sleep: 60
 
     steps:
-      - name: download files
+      - name: Download files
         run: |
           wget https://raw.githubusercontent.com/${{ github.repository }}/${{ matrix.branch }}/md5.txt -O md5.txt
           url="${{ matrix.url }}"
           if [[ "$url" == *".gz" ]]; then
-            echo "url is end with gz"
-            wget $url -O e.xml.gz
+            echo "URL ends with .gz"
+            wget "$url" -O e.xml.gz
             gzip -df e.xml.gz
           else
-            echo "url is not end with gz"
-            wget $url -O e.xml
+            echo "URL doesn't end with .gz"
+            wget "$url" -O e.xml
           fi
 
-      - name: check md5
+      - name: Check MD5
         run: |
           md5=$(md5sum ./e.xml | awk '{print $1}')
           if ! grep -q "$md5" ./md5.txt; then
@@ -50,39 +50,40 @@ jobs:
             echo "tag=$tag" >> $GITHUB_ENV
           fi
 
-      - name: checkout code
-        uses: actions/checkout@v4
+      - name: Checkout code
         if: ${{ env.isDiff }}
+        uses: actions/checkout@v4
         with:
           ref: ${{ matrix.branch }}
           path: epg
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
         if: ${{ env.isDiff }}
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.12' 
+          python-version: '3.12'
 
-      - name: xml to json
+      - name: Convert XML to JSON
         if: ${{ env.isDiff }}
         working-directory: epg
         run: |
-          mkdir ./xml ./json
+          mkdir -p ./xml ./json
           mv -f ../e.xml ./xml/e.xml
           pip install -r requirements.txt
           python xml2json.py
 
-      - name: move file
+      - name: Move and rename files
         if: ${{ env.isDiff }}
         working-directory: epg
         run: |
-          now_date=$(date -u -d '+8 hour' '+%Y-%m-%d')
           mv -f ./xml/e.xml ./xml/${{ matrix.branch }}.xml
           mv -f ./json/e.json ./json/${{ matrix.branch }}.json
           echo "${{ env.isDiff }}" > ./md5.txt
           sleep ${{ matrix.sleep }}
 
-      - uses: ncipollo/release-action@v1
+      - name: Create release
         if: ${{ env.isDiff }}
+        uses: ncipollo/release-action@v1
         with:
           tag: ${{ env.tag }}
           body: "更新时间: ${{ env.now_time }}"
@@ -91,15 +92,13 @@ jobs:
             epg/xml/*.xml
             epg/json/*.json
 
-      - name: Commit
+      - name: Commit changes
         if: ${{ env.isDiff }}
         working-directory: epg
         run: |
           git config --local user.name "github-actions[bot]"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          sed "2c * 更新时间: ${{ env.now_time }}" README.md -i
-          rm -rf ./xml
-          rm -rf ./json
+          sed -i "2c * 更新时间: ${{ env.now_time }}" README.md
           git add --all
           git commit -m "${{ env.now_time }}"
           git push -f origin ${{ matrix.branch }}
