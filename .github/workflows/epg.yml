@@ -18,9 +18,9 @@ jobs:
           - url: https://raw.githubusercontent.com/sparkssssssssss/epg/main/pp.xml.gz
             branch: 112114
             sleep: 0
-          - url: https://raw.githubusercontent.com/kuke31/xmlgz/main/e.xml.gz
-            分支: erw
-            sleep: 30
+          #- url: https://raw.githubusercontent.com/kuke31/xmlgz/main/e.xml.gz
+          #  分支: erw
+          #  sleep: 30
           # - url: http://epg.51zmt.top:8000/e.xml
           #   branch: 51zmt
           #   sleep: 60
