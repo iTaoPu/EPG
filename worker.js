@@ -1,5 +1,5 @@
 const Config = {
-    repository: 'celetor/epg',
+    repository: 'iTaoPu/EPG',
     branch: 'erw'
 }
 
